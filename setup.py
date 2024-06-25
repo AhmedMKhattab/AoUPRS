@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='AouPRS',
+    name='AoUPRS',
     version='0.1',
     description='AoUPRS is a Python module for calculating Polygenic Risk Scores (PRS) specific to the All of Us study',
     author='Ahmed Khattab',

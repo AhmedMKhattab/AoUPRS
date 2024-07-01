@@ -158,8 +158,8 @@ AoUPRS.calculate_prs_vds(vds_subset, prs_identifier, pgs_weight_path, output_pat
 ```
 
 ## Example Notebooks
-For a detailed example, refer to the provided Jupyter notebook in the [notebooks directory](https://github.com/AhmedMKhattab/AoUPRS/tree/main/notebooks)
-. This notebook demonstrates how to use the AoUPRS package to calculate PRS step-by-step.
+For detailed examples, refer to the provided Jupyter notebooks in the [notebooks directory](https://github.com/AhmedMKhattab/AoUPRS/tree/main/notebooks)
+. These notebooks demonstrate how to use the AoUPRS package to calculate PRS step-by-step.
 
 ## License
 

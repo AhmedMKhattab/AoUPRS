@@ -5,4 +5,4 @@ AoUPRS is a Python module for calculating Polygenic Risk Scores (PRS) specific t
 ## Installation
 
 ```bash
-pip install aou_prs
+pip install AoUPRS

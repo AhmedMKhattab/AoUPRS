@@ -127,6 +127,20 @@ sample_needed_ht = hl.import_table('sample_ids.csv', delimiter=',', key='person_
 vds_subset = hl.vds.filter_samples(vds_no_flag, sample_needed_ht, keep=True)
 ```
 8. __Prepare PRS Weight Table__
+   The weight table must have these columns:  
+   ["chr", "bp", "effect_allele", "noneffect_allele", "weight]
+    
+    The table below shows an example of a PRS weight table:
+
+| chr | bp        | effect_allele | noneffect_allele | weight   |
+|-----|-----------|---------------|------------------|----------|
+| 2   | 202881162 | C             | T                | 1.57E-01 |
+| 14  | 996676    | C             | T                | 6.77E-02 |
+| 2   | 202881162 | C             | T                | 1.57E-01 |
+| 14  | 99667605  | C             | T                | 6.77E-02 |
+| 6   | 12903725  | G             | A                | 1.13E-01 |
+| 13  | 110308365 | G             | A                | 6.77E-02 |
+   
 ```py
 # Prepare PRS weight table using function 'prepare_prs_table'
 

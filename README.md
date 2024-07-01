@@ -7,6 +7,7 @@ AoUPRS is a Python module designed for calculating Polygenic Risk Scores (PRS) s
 AoUPRS provides 2 different approaches for PRS calculation [Check hte publication for more details]:   
 
 __Approach 1:__ Using Hail Dense MatrixTable (MT)  
+
 __Approach 2:__ Using Hail Sparse Variant Dataset (VDS)   
 
 
@@ -33,20 +34,20 @@ These dependencies will be installed automatically when you install AoUPRS.
    
    __How to set up a Dataproc cluster:__
    - __Hail MT:__  
-     Requires more resources and from our experience, you need to allocate 300 workers. It's expensive but you end up saving time and money because the kernel crashes with lower resources.
+     Requires more resources. From our experience, you need to allocate 300 workers. It's expensive but you end up saving time and money because the kernel crashes with lower resources.
      
         __Cost when running:__ $72.91 per hour  
         __Main node:__ 4CPUs, 15GB RAM, 150 GB Disk   
         __Workers (300):__ 4CPUs, 15GB RAM, 150GB Disk   
 
     - __Hail VDS:__
-      The defualt resources will mostly suffice but if you have a big score and want to run it faster, use preemptible workers which are a lot more cheaper.
+      The default resources will mostly suffice, but if you have a big score and want to run it faster, use preemptible workers which are much cheaper.
 
         __Cost when running:__ $0.73 per hour  
         __Main node:__ 4CPUs, 15GB RAM, 150 GB Disk   
         __Workers (2):__ 4CPUs, 15GB RAM, 150GB Disk 
 
-** AoUPRS gives you the option to save the output files locally or to the cloud. We recommend to always save to the cloud as the the local files will be deleted with the deletion of Hail environment.
+** AoUPRS gives you the option to save the output files locally or to the cloud. We recommend always saving to the cloud as the local files will be deleted with the deletion of the Hail environment.
 
 2. __Importing the Packages__
    
@@ -85,7 +86,7 @@ vds = hl.vds.read_vds(vds_srwgs_path)
 6. __Drop Flagged srWGS samples__  
     AoU provides a table listing samples that are flagged as part of the sample outlier QC for the srWGS SNP and Indel joint callset.
 
-    Read more: [How the All of Us Genomic data are organized] (https://support.researchallofus.org/hc/en-us/articles/4614687617556-How-the-All-of-Us-Genomic-data-are-organized#h_01GY7QZR2QYFDKGK89TCHSJSA7)
+    Read more: [How the All of Us Genomic data are organized](https://support.researchallofus.org/hc/en-us/articles/4614687617556-How-the-All-of-Us-Genomic-data-are-organized#h_01GY7QZR2QYFDKGK89TCHSJSA7)
 
 ```py
 # Read flagged samples
@@ -150,11 +151,12 @@ AoUPRS.calculate_prs_vds(vds_subset, prs_identifier, pgs_weight_path, output_pat
 ```
 
 ## Example Notebooks
-For a detailed example, refer to the provided Jupyter notebook in the [notebooks directory] (https://github.com/AhmedMKhattab/AoUPRS/tree/main/notebooks). This notebook demonstrates how to use the AoUPRS package to calculate PRS step-by-step.
+For a detailed example, refer to the provided Jupyter notebook in the [notebooks directory](https://github.com/AhmedMKhattab/AoUPRS/tree/main/notebooks)
+. This notebook demonstrates how to use the AoUPRS package to calculate PRS step-by-step.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE] (https://github.com/AhmedMKhattab/AoUPRS/blob/main/LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/AhmedMKhattab/AoUPRS/blob/main/LICENSE) file for details.
 
 ## Author
 Ahmed Khattab

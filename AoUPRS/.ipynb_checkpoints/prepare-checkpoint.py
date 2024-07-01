@@ -38,7 +38,11 @@ def prepare_prs_table(input_path, output_path, bucket=None):
     else:
         hail_df_fp = output_path
         prs_df.to_csv(output_path, index=False)
-        
-    print(f"Modified PRS table saved as: {hail_df_fp}")    
+    
+    # Get the number of variants in the modified table
+    number_of_variants = prs_df.shape[0]
+    print(f"Number of variants in the modified table: {number_of_variants}")
+    
+    print(f"Modified PRS table saved as: {hail_df_fp}")
     
     return 

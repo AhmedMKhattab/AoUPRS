@@ -114,6 +114,11 @@ def calculate_prs_vds(vds, prs_identifier, pgs_weight_path, output_path, bucket=
     if save_found_variants:
         found_variants_table = mt_prs.filter_rows(hl.is_defined(mt_prs.prs_info)).rows()
         found_prs_info_df = found_variants_table.select(found_variants_table.prs_info).to_pandas()
+        
+        # Get the number of found variants
+        number_of_found_variants = found_prs_info_df.shape[0]
+        print(f"Number of found variants: {number_of_found_variants}")
+        
         if bucket:
             with gcsfs.GCSFileSystem().open(gc_found_csv_fp, 'w') as gcs_file:
                 found_prs_info_df.to_csv(gcs_file, header=True, index=False, sep=',')

@@ -135,8 +135,8 @@ AoUPRS.prepare_prs_table('PGS######_table.csv',
 
 # Read PRS weight table
 
-with gcsfs.GCSFileSystem().open(f'{bucket}/prs_calculator_tutorial/prs_calculator_hail_vds/vat_check/PGS######_weight_table.csv', 'rb') as gcs_file:
-    PGS002774_weights_tabel = pd.read_csv(gcs_file)
+with gcsfs.GCSFileSystem().open('PGS######_weight_table.csv', 'rb') as gcs_file:
+    PGS######_weights_table = pd.read_csv(gcs_file)
 ```
 
 

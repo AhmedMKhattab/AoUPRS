@@ -4,8 +4,8 @@ import os
 import pandas as pd
 import hail as hl
 import gcsfs
-from calculate_prs_mt import calculate_prs_mt
-from calculate_prs_vds import calculate_prs_vds
+from aou_prs.calculate_prs_mt import calculate_prs_mt
+from aou_prs.calculate_prs_vds import calculate_prs_vds
 
 # Define your main logic here, including input parameters, paths, and function calls
 

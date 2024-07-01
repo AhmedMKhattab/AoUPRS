@@ -33,8 +33,7 @@ These dependencies will be installed automatically when you install AoUPRS.
 1. __Setup your AoU cloud analysis environment by selecting the "Hail Genomic Analysis" environment and allocating the required resources.__
    
    __How to set up a Dataproc cluster:__
-   - __Hail MT:__  
-     Requires more resources. From our experience, you need to allocate 300 workers. It's expensive but you end up saving time and money because the kernel crashes with lower resources.
+   - __Hail MT:__  Requires more resources. From our experience, you need to allocate 300 workers. It's expensive but you end up saving time and money because the kernel crashes with lower resources.
      
         __Cost when running:__ $72.91 per hour  
         __Main node:__ 4CPUs, 15GB RAM, 150 GB Disk   
@@ -76,10 +75,12 @@ bucket = os.getenv("WORKSPACE_BUCKET")
 5. __Read Hail MT / VDS__
 ```py
 # Hail MT
+
 mt_wgs_path = os.getenv("WGS_ACAF_THRESHOLD_MULTI_HAIL_PATH")
 mt = hl.read_matrix_table(mt_wgs_path)
 
 # Hail VDS
+
 vds_srwgs_path = os.getenv("WGS_VDS_PATH")
 vds = hl.vds.read_vds(vds_srwgs_path)
 ```
@@ -90,15 +91,19 @@ vds = hl.vds.read_vds(vds_srwgs_path)
 
 ```py
 # Read flagged samples
+
 flagged_samples_path = "gs://fc-aou-datasets-controlled/v7/wgs/short_read/snpindel/aux/relatedness/relatedness_flagged_samples.tsv"
 
 # Save flagged samples locally
+
 !gsutil -u $$GOOGLE_PROJECT cat $flagged_samples_path > flagged_samples.cvs
 
 # Import flagged samples into a hail table
+
 flagged_samples = hl.import_table(flagged_samples_path, key='sample_id')
 
 # Drop flagged sample from main Hail 
+
 ## If Hail MT
 mt = mt.anti_join_cols(flagged_samples)
 
@@ -108,12 +113,14 @@ vds_no_flag = hl.vds.filter_samples(vds, flagged_samples, keep=False)
 7. __Define the sample__
 ```py
 # For MT:
+
 ## Convert the subset_sample_ids to a Python set
 subset_sample_ids_set = set(map(str, sample_ids['person_id'].tolist()))
 ## Filter samples
 mt = mt.filter_cols(hl.literal(subset_sample_ids_set).contains(mt.s))
 
 # For VDS:
+
 ## Import the sample as a Hail table
 sample_needed_ht = hl.import_table('sample_ids.csv', delimiter=',', key='person_id')
 ## Filter samples

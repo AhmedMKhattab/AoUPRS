@@ -19,20 +19,28 @@ def calculate_prs_vds(vds, prs_identifier, pgs_weight_path, output_path, bucket=
     :return: None
     """
     print("")
-    print("#####################################")
-    print("##                                 ##")
-    print("##       AoU PRS Calculator        ##")
-    print("##       Author: Ahmed Khattab     ##")
-    print("##         Scripps Research        ##")
-    print("##                                 ##")
-    print("#####################################")
+    print("##########################################")
+    print("##                                      ##")
+    print("##                AoUPRS                ##")
+    print("##    A PRS Calculator for All of Us    ##")
+    print("##         Author: Ahmed Khattab        ##")
+    print("##           Scripps Research           ##")
+    print("##                                      ##")
+    print("##########################################")
+    print("")
+    print("******************************************")
+    print("*                                        *")
+    print("*  Initializing, PRS protocol activated! *")
+    print("*                                        *")
+    print("******************************************")
     print("")
     
     print("")
-    print("#####################")
-    print(f"      {prs_identifier}")
-    print("#####################")
-
+    print("<<<<<<<<<>>>>>>>>")
+    print(f"    {prs_identifier}   ")
+    print("<<<<<<<<<>>>>>>>>")
+    print("")
+    
     # Construct paths
     if bucket:
         PGS_path = f'{bucket}/{pgs_weight_path}'

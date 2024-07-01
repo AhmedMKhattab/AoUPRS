@@ -13,6 +13,14 @@ def prepare_prs_table(input_path, output_path, bucket=None):
     :param bucket: (Optional) GCS bucket name if reading/writing from/to GCS.
     :return: Path to the saved modified PRS table file.
     """
+    print("")
+    print("********************************************************")
+    print("*                                                      *")
+    print("*   Winter is coming... and so is your Weight table!   *")
+    print("*                                                      *")
+    print("********************************************************")
+    print("")    
+    
     # Read the PRS table
     if bucket:
         gcs_path = f'{bucket}/{input_path}'
@@ -44,5 +52,14 @@ def prepare_prs_table(input_path, output_path, bucket=None):
     print(f"Number of variants in the modified table: {number_of_variants}")
     
     print(f"Modified PRS table saved as: {hail_df_fp}")
-    
+
+    print("")
+    print("*****************************************************")
+    print("*                                                   *")
+    print("*     Your quest is nearly complete, brave one!     *")
+    print("*                        BUT                        *")
+    print("*     The PRS adventure is about to get epic!       *")
+    print("*                                                   *")
+    print("*****************************************************")
+    print("")    
     return 

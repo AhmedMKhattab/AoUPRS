@@ -1,4 +1,5 @@
 # calculate_prs_mt.py
+
 import hail as hl
 import gcsfs
 import pandas as pd
@@ -18,20 +19,27 @@ def calculate_prs_mt(mt, prs_identifier, pgs_weight_path, output_path, bucket=No
     :return: None
     """
     print("")
-    print("#####################################")
-    print("##                                 ##")
-    print("##       AoU PRS Calculator        ##")
-    print("##       Author: Ahmed Khattab     ##")
-    print("##         Scripps Research        ##")
-    print("##                                 ##")
-    print("#####################################")
+    print("##########################################")
+    print("##                                      ##")
+    print("##                AoUPRS                ##")
+    print("##    A PRS Calculator for All of Us    ##")
+    print("##         Author: Ahmed Khattab        ##")
+    print("##           Scripps Research           ##")
+    print("##                                      ##")
+    print("##########################################")
     print("")
-    
+    print("******************************************")
+    print("*                                        *")
+    print("*       Ahoy, PRS treasures ahead!       *")
+    print("*                                        *")
+    print("******************************************")
+    print("")    
     print("")
-    print("#####################")
-    print(f"      {prs_identifier}")
-    print("#####################")
-    
+    print("<<<<<<<<<>>>>>>>>")
+    print(f"    {prs_identifier}   ")
+    print("<<<<<<<<<>>>>>>>>")
+    print("")
+
     # Construct paths
     if bucket:
         PGS_path = f'{bucket}/{pgs_weight_path}'

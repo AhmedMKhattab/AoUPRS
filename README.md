@@ -85,7 +85,7 @@ vds = hl.vds.read_vds(vds_srwgs_path)
 6. __Drop Flagged srWGS samples__  
     AoU provides a table listing samples that are flagged as part of the sample outlier QC for the srWGS SNP and Indel joint callset.
 
-    Read more: https://support.researchallofus.org/hc/en-us/articles/4614687617556-How-the-All-of-Us-Genomic-data-are-organized#h_01GY7QZR2QYFDKGK89TCHSJSA7
+    Read more: [How the All of Us Genomic data are organized] (https://support.researchallofus.org/hc/en-us/articles/4614687617556-How-the-All-of-Us-Genomic-data-are-organized#h_01GY7QZR2QYFDKGK89TCHSJSA7)
 
 ```py
 # Read flagged samples
@@ -127,7 +127,7 @@ AoUPRS.prepare_prs_table('PGS######_table.csv',
 
 # Read PRS weight table
 
-with gcsfs.GCSFileSystem().open(f'{bucket}/prs_calculator_tutorial/prs_calculator_hail_vds/vat_check/PGS002774_weight_table.csv', 'rb') as gcs_file:
+with gcsfs.GCSFileSystem().open(f'{bucket}/prs_calculator_tutorial/prs_calculator_hail_vds/vat_check/PGS######_weight_table.csv', 'rb') as gcs_file:
     PGS002774_weights_tabel = pd.read_csv(gcs_file)
 ```
 
@@ -149,13 +149,12 @@ AoUPRS.calculate_prs_mt(mt, prs_identifier, pgs_weight_path, output_path, bucket
 AoUPRS.calculate_prs_vds(vds_subset, prs_identifier, pgs_weight_path, output_path, bucket=bucket, save_found_variants=True)
 ```
 
-
 ## Example Notebooks
-For a detailed example, refer to the provided Jupyter notebook in the notebooks directory [https://github.com/AhmedMKhattab/AoUPRS/tree/main/notebooks]. This notebook demonstrates how to use the AoUPRS package to calculate PRS step-by-step.
+For a detailed example, refer to the provided Jupyter notebook in the [notebooks directory] (https://github.com/AhmedMKhattab/AoUPRS/tree/main/notebooks). This notebook demonstrates how to use the AoUPRS package to calculate PRS step-by-step.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE] (https://github.com/AhmedMKhattab/AoUPRS/blob/main/LICENSE) file for details.
 
 ## Author
 Ahmed Khattab

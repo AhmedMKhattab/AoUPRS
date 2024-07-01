@@ -3,7 +3,7 @@ import hail as hl
 import gcsfs
 import pandas as pd
 
-from AoUPRS.utils import calculate_effect_allele_count
+from .utils import calculate_effect_allele_count
 
 def calculate_prs_mt(mt, prs_identifier, pgs_weight_path, output_path, bucket=None, save_found_variants=False):
     """

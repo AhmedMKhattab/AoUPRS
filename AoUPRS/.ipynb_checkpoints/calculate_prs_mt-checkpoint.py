@@ -128,8 +128,7 @@ def calculate_prs_mt(mt, prs_identifier, pgs_weight_path, output_path, bucket=No
     # Export the Hail Table to a CSV file
     saved_mt = hl.read_table(hail_fp)
     if bucket:
-        with gcsfs.GCSFileSystem().open(gc_csv_fp, 'w') as gcs_file:
-            saved_mt.export(gcs_file, header=True, delimiter=',')
+        saved_mt.export(gc_csv_fp, header=True, delimiter=',')
     else:
         saved_mt.export(gc_csv_fp, header=True, delimiter=',')
     print(f"PRS scores saved as: {gc_csv_fp}")

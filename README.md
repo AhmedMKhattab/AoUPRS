@@ -109,7 +109,9 @@ mt = mt.anti_join_cols(flagged_samples)
 
 ## If Hail VDS:
 vds_no_flag = hl.vds.filter_samples(vds, flagged_samples, keep=False)
-```87. __Define the sample__
+```
+
+8. __Define the sample__
 ```py
 # For MT:
 
@@ -125,7 +127,8 @@ sample_needed_ht = hl.import_table('sample_ids.csv', delimiter=',', key='person_
 ## Filter samples
 vds_subset = hl.vds.filter_samples(vds_no_flag, sample_needed_ht, keep=True)
 ```
-8. __Prepare PRS Weight Table__  
+9. __Prepare PRS Weight Table__
+     
    The weight table must have these columns:
    
    ["chr", "bp", "effect_allele", "noneffect_allele", "weight"]
@@ -155,7 +158,7 @@ with gcsfs.GCSFileSystem().open('PGS######_weight_table.csv', 'rb') as gcs_file:
 ```
 
 
-9. __Calculate PRS__
+10. __Calculate PRS__
 ```py
 # Define paths
 

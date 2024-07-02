@@ -48,10 +48,9 @@ These dependencies will be installed automatically when you install AoUPRS.
 
 ** AoUPRS gives you the option to save the output files locally or to the cloud. We recommend always saving to the cloud as the local files will be deleted with the deletion of the Hail environment.
 
-2. If you wish to query the [Variant Annotation Table](https://support.researchallofus.org/hc/en-us/articles/4615256690836-Variant-Annotation-Table) before calculating a PRS from Hail VDS to  include only variants 
+2. If you wish to query the [Variant Annotation Table](https://support.researchallofus.org/hc/en-us/articles/4615256690836-Variant-Annotation-Table) before calculating a PRS from Hail VDS to  include only variants present in the callset, follow this [notebook](notebooks/AoUPRS_hailvds_PGS000746.ipynb).
 
-
-2. __Importing the Packages__
+32. __Importing the Packages__
    
     To use AoUPRS, first import the package:
 ```py
@@ -64,18 +63,15 @@ import gcsfs
 import glob
 import hail as hl
 ```
-
-3. __Initiate Hail__
+43. __Initiate Hail__
 ```py
 hl.init(tmp_dir='hail_temp/', default_reference='GRCh38')
 ```
-
-4. __Define Bucket__
+54. __Define Bucket__
 ```py
 bucket = os.getenv("WORKSPACE_BUCKET")
 ```
-
-5. __Read Hail MT / VDS__
+65. __Read Hail MT / VDS__
 ```py
 # Hail MT
 
@@ -86,8 +82,7 @@ mt = hl.read_matrix_table(mt_wgs_path)
 
 vds_srwgs_path = os.getenv("WGS_VDS_PATH")
 vds = hl.vds.read_vds(vds_srwgs_path)
-```
-6. __Drop Flagged srWGS samples__  
+```76. __Drop Flagged srWGS samples__  
     AoU provides a table listing samples that are flagged as part of the sample outlier QC for the srWGS SNP and Indel joint callset.
 
     Read more: [How the All of Us Genomic data are organized](https://support.researchallofus.org/hc/en-us/articles/4614687617556-How-the-All-of-Us-Genomic-data-are-organized#h_01GY7QZR2QYFDKGK89TCHSJSA7)
@@ -112,8 +107,7 @@ mt = mt.anti_join_cols(flagged_samples)
 
 ## If Hail VDS:
 vds_no_flag = hl.vds.filter_samples(vds, flagged_samples, keep=False)
-```
-7. __Define the sample__
+```87. __Define the sample__
 ```py
 # For MT:
 
@@ -128,8 +122,7 @@ mt = mt.filter_cols(hl.literal(subset_sample_ids_set).contains(mt.s))
 sample_needed_ht = hl.import_table('sample_ids.csv', delimiter=',', key='person_id')
 ## Filter samples
 vds_subset = hl.vds.filter_samples(vds_no_flag, sample_needed_ht, keep=True)
-```
-8. __Prepare PRS Weight Table__  
+```98. __Prepare PRS Weight Table__  
    The weight table must have these columns:
    
    ["chr", "bp", "effect_allele", "noneffect_allele", "weight"]
@@ -144,7 +137,7 @@ vds_subset = hl.vds.filter_samples(vds_no_flag, sample_needed_ht, keep=True)
     | 14  | 99667605  | C             | T                | 6.77E-02 |
     | 6   | 12903725  | G             | A                | 1.13E-01 |
     | 13  | 110308365 | G             | A                | 6.77E-02 |
-       
+        
 ```py
 # Prepare PRS weight table using function 'prepare_prs_table'
 
@@ -157,8 +150,7 @@ with gcsfs.GCSFileSystem().open('PGS######_weight_table.csv', 'rb') as gcs_file:
     PGS######_weights_table = pd.read_csv(gcs_file)
 ```
 
-
-9. __Calculate PRS__
+109. __Calculate PRS__
 ```py
 # Define paths
 
@@ -176,12 +168,12 @@ AoUPRS.calculate_prs_vds(vds_subset, prs_identifier, pgs_weight_path, output_pat
 ```
 
 ## Example Notebooks
-For detailed examples, refer to the provided Jupyter notebooks in the [notebooks directory](https://github.com/AhmedMKhattab/AoUPRS/tree/main/notebooks)
+For detailed examples, refer to the provided Jupyter notebooks in the [notebooks directoy]]https://github.com/AhmedMKhattab/AoUPRS/tree/main/notebookss)
 . These notebooks demonstrate how to use the AoUPRS package to calculate PRS step-by-step.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](https://github.com/AhmedMKhattab/AoUPRS/blob/main/LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE]https://github.com/AhmedMKhattab/AoUPRS/blob/main/LICENSEE) file for details.
 
 ## Author
 Ahmed Khattab

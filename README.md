@@ -4,7 +4,7 @@
 
 AoUPRS is a Python module designed for calculating Polygenic Risk Scores (PRS) specific to the All of Us study. This tool leverages Hail, a scalable framework for exploring and analyzing genomic data, to provide efficient PRS calculations.
 
-AoUPRS provides 2 different approaches for PRS calculation [Check hte publication for more details]:   
+AoUPRS provides 2 different approaches for PRS calculation [Check hte publication, currently under review, for more details]:   
 
 __Approach 1:__ Using Hail Dense MatrixTable (MT)  
 

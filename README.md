@@ -1,7 +1,7 @@
 # AoUPRS
 
 <p align="center">
-  <img src="AoUPRS/aou_logo.png" alt="AoUPRS Logo" width="300"/>
+  <img src="AoUPRS/aou_logo.png" alt="AoUPRS Logo" width="600"/>
 </p>
 
 ## Overview

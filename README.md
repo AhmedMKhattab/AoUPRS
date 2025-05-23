@@ -52,7 +52,7 @@ These dependencies will be installed automatically when you install AoUPRS.
 
 ** AoUPRS gives you the option to save the output files locally or to the cloud. We recommend always saving to the cloud as the local files will be deleted with the deletion of the Hail environment.
 
-2. If you wish to query the [Variant Annotation Table](https://support.researchallofus.org/hc/en-us/articles/4615256690836-Variant-Annotation-Table) before calculating a PRS from Hail VDS to  include only variants present in the callset, follow this [notebook](notebooks/AoUPRS_hailvds_PGS000746_check_vat.ipynb).
+2. If you wish to query the [Variant Annotation Table](https://support.researchallofus.org/hc/en-us/articles/4615256690836-Variant-Annotation-Table) before calculating a PRS from Hail VDS to  include only variants present in the callset, follow this [notebook](https://github.com/AhmedMKhattab/AoUPRS/tree/main/notebooks/AoUPRS_hailvds_PGS000746_check_vat.ipynb).
 
 3. __Importing the Packages__
    

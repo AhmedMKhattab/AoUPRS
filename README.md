@@ -193,19 +193,5 @@ If you use AoUPRS in your research, please cite:
 
 > Khattab A, Chen S-F, Wineinger N, Torkamani A. **AoUPRS: A Cost-Effective and Versatile PRS Calculator for the All of Us Program**. *BMC Genomics*. 2025;26:412. https://doi.org/10.1186/s12864-025-11693-9
 
-BibTeX:
-```bibtex
-@article{khattab2025aouprs,
-  title   = {AoUPRS: A Cost-Effective and Versatile PRS Calculator for the All of Us Program},
-  author  = {Khattab, Ahmed and Chen, Shang-Fu and Wineinger, Nathan and Torkamani, Ali},
-  journal = {BMC Genomics},
-  year    = {2025},
-  volume  = {26},
-  number  = {},
-  pages   = {412},
-  doi     = {10.1186/s12864-025-11693-9},
-  url     = {https://bmcgenomics.biomedcentral.com/articles/10.1186/s12864-025-11693-9}
-}
-```
 ## Author
 Ahmed Khattab

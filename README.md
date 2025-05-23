@@ -8,13 +8,13 @@
 
 AoUPRS is a Python module designed for calculating Polygenic Risk Scores (PRS) specific to the All of Us study. This tool leverages Hail, a scalable framework for exploring and analyzing genomic data, to provide efficient PRS calculations.
 
-AoUPRS provides 2 different approaches for PRS calculation [Check the publication](https://pmc.ncbi.nlm.nih.gov/articles/PMC11275801/), currently under review, for more details]:   
+AoUPRS provides 2 different approaches for PRS calculation [[Check the publication](https://bmcgenomics.biomedcentral.com/articles/10.1186/s12864-025-11693-9) for more details]:   
 
 __Approach 1:__ Using Hail Dense MatrixTable (MT)  
 
 __Approach 2:__ Using Hail Sparse Variant Dataset (VDS)   
 
-
+🧬 __Note:__ AoUPRS is initially designed for and tested with the All of Us Controlled Tier Dataset v7.
 
 ## Installation
 
@@ -180,12 +180,32 @@ AoUPRS.calculate_prs_vds(vds_subset, prs_identifier, pgs_weight_path, output_pat
 ```
 
 ## Example Notebooks
-For detailed examples, refer to the provided Jupyter notebooks in the [notebooks directoy](https://github.com/AhmedMKhattab/AoUPRS/tree/main/notebooks)
+For detailed examples, refer to the provided Jupyter notebooks in the [notebooks directory](https://github.com/AhmedMKhattab/AoUPRS/tree/main/notebooks)
 . These notebooks demonstrate how to use the AoUPRS package to calculate PRS step-by-step.
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](https://github.com/AhmedMKhattab/AoUPRS/blob/main/LICENSE) file for details.
 
+## 📚 Citation
+
+If you use AoUPRS in your research, please cite:
+
+> Khattab A, Chen S-F, Wineinger N, Torkamani A. **AoUPRS: A Cost-Effective and Versatile PRS Calculator for the All of Us Program**. *BMC Genomics*. 2025;26:412. https://doi.org/10.1186/s12864-025-11693-9
+
+BibTeX:
+```bibtex
+@article{khattab2025aouprs,
+  title   = {AoUPRS: A Cost-Effective and Versatile PRS Calculator for the All of Us Program},
+  author  = {Khattab, Ahmed and Chen, Shang-Fu and Wineinger, Nathan and Torkamani, Ali},
+  journal = {BMC Genomics},
+  year    = {2025},
+  volume  = {26},
+  number  = {},
+  pages   = {412},
+  doi     = {10.1186/s12864-025-11693-9},
+  url     = {https://bmcgenomics.biomedcentral.com/articles/10.1186/s12864-025-11693-9}
+}
+```
 ## Author
 Ahmed Khattab

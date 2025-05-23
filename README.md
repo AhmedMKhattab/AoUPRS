@@ -1,7 +1,7 @@
 # AoUPRS
 
 <p align="center">
-  <img src="AoUPRS/aou_logo_bigger.png" alt="AoUPRS Logo" width="300"/>
+  <img src="https://raw.githubusercontent.com/AhmedMKhattab/AoUPRS/main/AoUPRS/aou_logo_bigger.png" alt="AoUPRS Logo" width="300"/>
 </p>
 
 ## Overview

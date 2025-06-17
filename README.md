@@ -14,7 +14,17 @@ __Approach 1:__ Using Hail Dense MatrixTable (MT)
 
 __Approach 2:__ Using Hail Sparse Variant Dataset (VDS)   
 
-🧬 __Note:__ AoUPRS is initially designed for and tested with the All of Us Controlled Tier Dataset v7.
+## ⚠️ Dataset Compatibility Update (v8)
+
+> 🧬 **AoUPRS now supports both v7 and v8 of the All of Us Controlled Tier WGS dataset.**  
+>
+> 🔄 **Key change in v8:** The `GT` field is **no longer present** in the VDS.  
+> ✅ AoUPRS now infers genotype calls using the new fields:
+> - `LGT` – local genotype index  
+> - `LA` – local alleles array  
+>
+> This ensures seamless and cost-effective PRS calculation using the new, sparser v8 VDS format.  
+>
 
 ## Installation
 

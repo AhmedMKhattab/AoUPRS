@@ -1,3 +1,15 @@
+Metadata-Version: 2.1
+Name: AoUPRS
+Version: 0.2.1
+Summary: AoUPRS is a Python module for calculating Polygenic Risk Scores (PRS) specific to the All of Us study
+Home-page: https://github.com/AhmedMKhattab/AoUPRS
+Author: Ahmed Khattab
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: hail
+Requires-Dist: gcsfs
+Requires-Dist: pandas
+
 # AoUPRS
 
 <p align="center">
@@ -110,7 +122,7 @@ flagged_samples_path = "gs://fc-aou-datasets-controlled/v7/wgs/short_read/snpind
 
 # Save flagged samples locally
 
-!gsutil -u $$GOOGLE_PROJECT cat $flagged_samples_path > flagged_samples.csv
+!gsutil -u $$GOOGLE_PROJECT cat $flagged_samples_path > flagged_samples.cvs
 
 # Import flagged samples into a hail table
 
@@ -190,16 +202,8 @@ AoUPRS.calculate_prs_vds(vds_subset, prs_identifier, pgs_weight_path, output_pat
 ```
 
 ## Example Notebooks
-For detailed examples, refer to the provided Jupyter notebooks in the [notebooks directory](https://workbench.researchallofus.org/workspaces/aou-rw-c346f546/aouprsacosteffectiveprscalculatorfortheallofusprogram/data)
+For detailed examples, refer to the provided Jupyter notebooks in the [notebooks directory](https://github.com/AhmedMKhattab/AoUPRS/tree/main/notebooks)
 . These notebooks demonstrate how to use the AoUPRS package to calculate PRS step-by-step.
-
-## 🚀 Try it on the All of Us Researcher Workbench
-
-This tool is live and fully executable in a public workspace:
-
-🔗 [Launch AoUPRS on the All of Us Researcher Workbench](https://workbench.researchallofus.org/workspaces/aou-rw-c346f546/aouprsacosteffectiveprscalculatorfortheallofusprogram/analysis)
-
-You can explore, duplicate, and run the included notebooks — no setup required.
 
 ## License
 

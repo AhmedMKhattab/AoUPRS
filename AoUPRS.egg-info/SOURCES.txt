@@ -1,0 +1,14 @@
+LICENSE
+README.md
+setup.py
+AoUPRS/__init__.py
+AoUPRS/calculate_prs.py
+AoUPRS/calculate_prs_mt.py
+AoUPRS/calculate_prs_vds.py
+AoUPRS/prepare.py
+AoUPRS/utils.py
+AoUPRS.egg-info/PKG-INFO
+AoUPRS.egg-info/SOURCES.txt
+AoUPRS.egg-info/dependency_links.txt
+AoUPRS.egg-info/requires.txt
+AoUPRS.egg-info/top_level.txt

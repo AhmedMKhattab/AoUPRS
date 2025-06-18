@@ -197,7 +197,7 @@ For detailed examples, refer to the provided Jupyter notebooks in the [notebooks
 
 This tool is live and fully executable in a public workspace:
 
-🔗 [Launch AoUPRS on the All of Us Researcher Workbench](https://workbench.researchallofus.org/workspaces/YOUR-LINK-HERE)
+🔗 [Launch AoUPRS on the All of Us Researcher Workbench](https://workbench.researchallofus.org/workspaces/aou-rw-c346f546/aouprsacosteffectiveprscalculatorfortheallofusprogram/analysis)
 
 You can explore, duplicate, and run the included notebooks — no setup required.
 

@@ -110,7 +110,7 @@ flagged_samples_path = "gs://fc-aou-datasets-controlled/v7/wgs/short_read/snpind
 
 # Save flagged samples locally
 
-!gsutil -u $$GOOGLE_PROJECT cat $flagged_samples_path > flagged_samples.cvs
+!gsutil -u $$GOOGLE_PROJECT cat $flagged_samples_path > flagged_samples.csv
 
 # Import flagged samples into a hail table
 

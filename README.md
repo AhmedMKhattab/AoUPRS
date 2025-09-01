@@ -26,7 +26,76 @@ __Approach 2:__ Using Hail Sparse Variant Dataset (VDS)
 > This ensures seamless and cost-effective PRS calculation using the new, sparser v8 VDS format.  
 >
 
-## Installation
+# 🚀 AoUPRS v8 Performance Update
+
+With the release of **All of Us WGS v8**, users will notice differences in runtime and stability compared to v7 when calculating PRS scores. This section summarizes the key updates, scaling behavior, and practical recommendations.
+
+---
+
+## 🔎 Why v8 is Slower
+- **Variant count explosion**  
+  - v7 VAT ≈ 1.7B variants  
+  - v8 VAT ≈ **4.9B variants** (almost 3× larger)  
+- **Impact**: Interval queries and filtering are heavier, requiring more I/O and shuffle.  
+- Even with the same cluster resources, v8 chunks take **longer wall-clock time** compared to v7.
+
+---
+
+## ⚖️ Chunking Behavior
+- Large scores (>1M variants) must be processed in chunks to avoid memory failures.  
+- **Chunk size vs runtime (v8, 8 CPU / 52 GB driver, 10–50 workers):**
+  - **50k variants** → ~7–8 minutes per chunk  
+  - **100k variants** → ~15 minutes per chunk  
+  - **150k variants** → ~52 minutes per chunk (nonlinear slowdown)  
+
+👉 **Recommendation**: Use **50k chunks** for stability and predictability.  
+Checkpointing ensures partial progress is saved if the environment resets.  
+
+---
+
+## ⚡ Worker Scaling
+Experiments show that **adding more workers does not speed up runs** on v8:
+
+- Increasing from **10 → 30 → 50 workers** actually introduced overhead (task scheduling, shuffle, stragglers).  
+- Best performance and stability were achieved with **10 workers**.  
+- Runtime per chunk stayed essentially the same, with fewer retries and less instability.
+
+👉 **Recommendation**:  
+- Use **10 preemptible workers** (4 CPUs, 15 GB RAM each) as the sweet spot.  
+- More workers add cost without reducing runtime.
+
+---
+
+## 💰 Cost Notes
+- Example setup:  
+  - **Master node**: 8 CPUs / 52 GB RAM  
+  - **Workers**: 10 × (4 CPUs, 15 GB RAM, 150 GB disk), preemptible  
+  - **Cost**: ~$1.95/hour running, $0.11/hour paused  
+- At ~7–8 min per 50k chunk, a 1M SNP PRS (~20 chunks) runs in ~3 hours wall time, costing ~ $6.
+
+---
+
+## ✅ Practical Tips
+- Expect **slower runtimes on v8** than v7 for the same cluster size.  
+- Use **50k chunks + checkpointing** for stability.  
+- Stick to **10 workers** — scaling up won’t help.  
+- Budget more compute time and cost for large PRS calculations.  
+
+---
+
+## 🛠️ Troubleshooting and Resume Support
+AoUPRS code has been updated to support **chunked runs with checkpointing**:
+
+- Each chunk is saved immediately as `{identifier}_chunkN.csv` in your output bucket.  
+- If the AoU environment crashes mid-run, already completed chunks are **skipped automatically** on restart.  
+- At the end, all chunks can be recombined into a single final file.  
+
+👉 This makes long PRS runs on v8 more robust: you won’t lose hours of progress if the job is interrupted. 
+
+---
+
+
+## 🔧 Installation
 
 To install AoUPRS from GitHub, run the following command:
 

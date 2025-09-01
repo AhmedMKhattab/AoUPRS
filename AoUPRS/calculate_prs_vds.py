@@ -3,21 +3,141 @@
 import hail as hl
 import gcsfs
 import pandas as pd
+import os
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .utils import calculate_effect_allele_count_na_hom_ref
 
-def calculate_prs_vds(vds, prs_identifier, pgs_weight_path, output_path, bucket=None, save_found_variants=False):
+
+# ---------------------------------------------------------------
+# Timer helper with icons
+# ---------------------------------------------------------------
+class StepTimer:
+    def __init__(self, step_name, icon="⏩"):
+        self.step_name = step_name
+        self.icon = icon
+        self.start = None
+
+    def __enter__(self):
+        print(f"{self.icon} {self.step_name}...")
+        self.start = time.time()
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        elapsed = round(time.time() - self.start, 2)
+        print(f"✅ {self.step_name} done in {elapsed}s\n")
+
+
+# ---------------------------------------------------------------
+# Core single-run function (your original steps)
+# ---------------------------------------------------------------
+def _calculate_prs_single(vds, prs_df, prs_identifier, pgs_weight_path, output_path,
+                          bucket=None, save_found_variants=False):
     """
-    Calculates the Polygenic Risk Score (PRS) for the given VariantDataset (VDS) and saves the results.
-    
-    :param vds: Hail VariantDataset.
-    :param prs_identifier: Identifier for the PRS.
-    :param pgs_weight_path: Path to the PRS weights file.
-    :param output_path: Path to save the output files.
-    :param bucket: (Optional) GCS bucket name if reading/writing from/to GCS.
-    :param save_found_variants: (Optional) If True, save the found variants information.
-    :return: None
+    Run PRS calculation exactly as the old function (single set of variants).
     """
+
+    fs = gcsfs.GCSFileSystem()
+
+    # Construct paths
+    if bucket:
+        PGS_path = f"{bucket}/{pgs_weight_path}"
+        interval_fp = f"{bucket}/{output_path}/interval/{prs_identifier}_interval.tsv"
+        hail_fp = f"{bucket}/{output_path}/hail/{prs_identifier}"
+        gc_csv_fp = f"{bucket}/{output_path}/score/{prs_identifier}_scores.csv"
+        gc_found_csv_fp = f"{bucket}/{output_path}/score/{prs_identifier}_found_in_aou.csv"
+    else:
+        PGS_path = pgs_weight_path
+        interval_fp = f"{output_path}/interval/{prs_identifier}_interval.tsv"
+        hail_fp = f"{output_path}/hail/{prs_identifier}"
+        gc_csv_fp = f"{output_path}/score/{prs_identifier}_scores.csv"
+        gc_found_csv_fp = f"{output_path}/score/{prs_identifier}_found_in_aou.csv"
+
+    # Step 1. Save intervals
+    with StepTimer("Saving intervals", "📦"):
+        prs_df["end"] = prs_df["position"]
+        interval_df = prs_df[["contig", "position", "end"]]
+        if bucket:
+            with fs.open(interval_fp, "w") as f:
+                interval_df.to_csv(f, header=False, index=False, sep="\t")
+        else:
+            interval_df.to_csv(interval_fp, header=False, index=False, sep="\t")
+
+    # Step 2. Filter VDS
+    with StepTimer("Filtering VDS with intervals", "🔍"):
+        prs_sites = hl.import_locus_intervals(interval_fp, reference_genome="GRCh38", skip_invalid_intervals=True)
+        vds_prs = hl.vds.filter_intervals(vds, prs_sites, keep=True)
+
+    # Step 3. Re-import PRS weights with schema
+    with StepTimer("Re-importing PRS table with schema", "📖"):
+        required = ["variant_id", "weight", "contig", "position", "effect_allele", "noneffect_allele"]
+        missing = [c for c in required if c not in prs_df.columns]
+        if missing:
+            raise ValueError(f"PRS table missing required columns: {', '.join(missing)}")
+
+        optional = [c for c in prs_df.columns if c not in required]
+        col_types = {c: "str" for c in required}
+        col_types.update({"weight": "float64", "position": "int32"})
+        col_types.update({c: "str" for c in optional})
+
+        prs_table = hl.import_table(PGS_path, types=col_types, delimiter=",")
+        prs_table = prs_table.annotate(locus=hl.locus(prs_table.contig, prs_table.position))
+        prs_table = prs_table.key_by("locus")
+
+    # Step 4. Annotate MT
+    with StepTimer("Annotating MT with PRS info", "📝"):
+        mt = vds_prs.variant_data.annotate_rows(prs_info=prs_table[vds_prs.variant_data.locus])
+        mt = mt.unfilter_entries()
+
+    # Step 5. Effect allele counts
+    with StepTimer("Calculating effect allele counts", "🧮"):
+        eff = calculate_effect_allele_count_na_hom_ref(mt)
+        mt = mt.annotate_entries(
+            effect_allele_count=eff,
+            weighted_count=eff * mt.prs_info["weight"]
+        )
+
+    # Step 6. Aggregate per sample
+    with StepTimer("Summing weighted counts per sample", "➕"):
+        mt = mt.annotate_cols(
+            sum_weights=hl.agg.sum(mt.weighted_count),
+            N_variants=hl.agg.count_where(hl.is_defined(mt.weighted_count))
+        )
+
+    # Step 7. Write scores
+    with StepTimer("Writing PRS scores to Hail Table", "💾"):
+        mt.key_cols_by().cols().write(hail_fp, overwrite=True)
+
+    # Step 8. Export to CSV
+    with StepTimer("Exporting PRS scores to CSV", "📊"):
+        saved_mt = hl.read_table(hail_fp)
+        saved_mt.export(gc_csv_fp, header=True, delimiter=",")
+
+    # Step 9. Optional found variants
+    if save_found_variants:
+        with StepTimer("Extracting found variants", "🔎"):
+            found = mt.filter_rows(hl.is_defined(mt.prs_info)).rows()
+            found_df = found.select(found.prs_info).to_pandas()
+            if bucket:
+                with fs.open(gc_found_csv_fp, "w") as f:
+                    found_df.to_csv(f, header=True, index=False, sep=",")
+            else:
+                found_df.to_csv(gc_found_csv_fp, header=True, index=False, sep=",")
+
+    return pd.read_csv(gc_csv_fp)
+
+
+# ---------------------------------------------------------------
+# Public wrapper with chunking
+# ---------------------------------------------------------------
+def calculate_prs_vds(vds, prs_identifier, pgs_weight_path, output_path,
+                      bucket=None, save_found_variants=False,
+                      chunk_size=None, max_workers=1, max_retries=2):
+    """
+    Calculate PRS from a VDS.
+    Uses the original single-run pipeline, with optional chunking of variants.
+    """
+
     print("")
     print("##########################################")
     print("##                                      ##")
@@ -28,133 +148,95 @@ def calculate_prs_vds(vds, prs_identifier, pgs_weight_path, output_path, bucket=
     print("##                                      ##")
     print("##########################################")
     print("")
-    print("******************************************")
-    print("*                                        *")
-    print("*       Ahoy, PRS treasures ahead!       *")
-    print("*                                        *")
-    print("******************************************")
-    print("")
 
-    print("")
-    print("<<<<<<<<<>>>>>>>>")
-    print(f"   {prs_identifier}   ")
-    print("<<<<<<<<<>>>>>>>>")
-    print("")
+    import warnings
+    warnings.simplefilter(action="ignore", category=pd.errors.SettingWithCopyWarning)
 
-    # Construct paths
+    fs = gcsfs.GCSFileSystem()
+
+    # Ensure local dirs if no bucket
+    if bucket is None:
+        for sub in ["interval", "weights", "hail", "score"]:
+            os.makedirs(f"{output_path}/{sub}", exist_ok=True)
+
+    # Load weights into pandas
+    print("[*] Reading PRS weights...")
     if bucket:
-        PGS_path = f'{bucket}/{pgs_weight_path}'
-        interval_fp = f"{bucket}/{output_path}/interval/{prs_identifier}_interval.tsv"
-        hail_fp = f'{bucket}/{output_path}/hail/'
-        gc_csv_fp = f'{bucket}/{output_path}/score/{prs_identifier}_scores.csv'
-        gc_found_csv_fp = f'{bucket}/{output_path}/score/{prs_identifier}_found_in_aou.csv'
+        with fs.open(f"{bucket}/{pgs_weight_path}", "rb") as f:
+            prs_df = pd.read_csv(f)
     else:
-        PGS_path = pgs_weight_path
-        interval_fp = f"{output_path}/interval/{prs_identifier}_interval.tsv"
-        hail_fp = f'{output_path}/hail/'
-        gc_csv_fp = f'{output_path}/score/{prs_identifier}_scores.csv'
-        gc_found_csv_fp = f'{output_path}/score/{prs_identifier}_found_in_aou.csv'
+        prs_df = pd.read_csv(pgs_weight_path)
 
-    
-    # Read PRS weight table
-    print("Reading PRS weight table...")
-    try:
+    # If no chunking → run single-shot
+    if chunk_size is None:
+        return _calculate_prs_single(vds, prs_df, prs_identifier,
+                                     pgs_weight_path, output_path,
+                                     bucket, save_found_variants)
+
+    # Otherwise: chunked run
+    prs_df["chunk_id"] = prs_df.index // chunk_size
+    chunk_ids = prs_df["chunk_id"].unique().tolist()
+    print(f"[*] Splitting into {len(chunk_ids)} chunks (chunk_size={chunk_size})")
+
+    all_scores, failed = [], []
+
+    def run_with_retry(cid):
+        sub_df = prs_df.loc[prs_df["chunk_id"] == cid].copy()  # ✅ no warning
+
+        # chunk output file
+        chunk_fp = f"{output_path}/score/{prs_identifier}_chunk{cid}_scores.csv"
         if bucket:
-            with gcsfs.GCSFileSystem().open(PGS_path, 'rb') as gcs_file:
-                prs_df = pd.read_csv(gcs_file)
+            chunk_exists = fs.exists(f"{bucket}/{chunk_fp}")
         else:
-            prs_df = pd.read_csv(PGS_path)
-    except FileNotFoundError:
-        raise FileNotFoundError(f"The file {PGS_path} was not found. Please check the file path and try again.")
-    except Exception as e:
-        raise Exception(f"An error occurred: {e}")
+            chunk_exists = os.path.exists(chunk_fp)
 
-    prs_df['end'] = prs_df['position']
-    prs_interval_df = prs_df[['contig', 'position', 'end']]
-    
-    print(f"Saving intervals...")
-    try:
+        # if already exists, reload
+        if chunk_exists:
+            print(f"⏭️ [chunk {cid}] Skipping (already exists).")
+            return pd.read_csv(f"{bucket}/{chunk_fp}" if bucket else chunk_fp)
+
+        for attempt in range(1, max_retries + 1):
+            with StepTimer(f"Chunk {cid} attempt {attempt}", "⏱️"):
+                try:
+                    return _calculate_prs_single(
+                        vds, sub_df, f"{prs_identifier}_chunk{cid}",
+                        pgs_weight_path, output_path,
+                        bucket, save_found_variants
+                    )
+                except Exception as e:
+                    print(f"💥 [chunk {cid}] Failed attempt {attempt}: {e}")
+                    if attempt == max_retries:
+                        print(f"💀 [chunk {cid}] Giving up after {max_retries} attempts.")
+                        failed.append(cid)
+                        return None
+
+    with StepTimer("Total PRS run", "⏳"):  # ✅ grand total
+        with ThreadPoolExecutor(max_workers=max_workers) as ex:
+            futures = {ex.submit(run_with_retry, cid): cid for cid in chunk_ids}
+            for fut in as_completed(futures):
+                result = fut.result()
+                if result is not None:
+                    all_scores.append(result)
+
+    # Merge results
+    if all_scores:
+        final = pd.concat(all_scores)
+        final = final.groupby("s").agg({
+            "sum_weights": "sum",
+            "N_variants": "sum"
+        }).reset_index().rename(columns={"s": "sample_id"})
+
+        final_fp = f"{output_path}/score/{prs_identifier}_final_scores.csv"
         if bucket:
-            with gcsfs.GCSFileSystem().open(interval_fp, 'w') as gcs_file:
-                prs_interval_df.to_csv(gcs_file, header=False, index=False, sep="\t")
+            with fs.open(f"{bucket}/{final_fp}", "w") as f:
+                final.to_csv(f, index=False)
         else:
-            prs_interval_df.to_csv(interval_fp, header=False, index=False, sep="\t")
-    except Exception as e:
-        raise Exception(f"Failed to save intervals to {interval_fp}. Error: {e}")
-        
-    print(f"Intervals saved as: {interval_fp}")
-    
-    # Import locus intervals and filter variants
-    print("Importing locus intervals and filtering variants...")
-    prs_sites = hl.import_locus_intervals(interval_fp, reference_genome='GRCh38', skip_invalid_intervals=True)
-    
-    print("Filtering intervals in VDS...")
-    vds_prs = hl.vds.filter_intervals(vds, prs_sites, keep=True)
-    print("Filtered intervals successfully.")
+            final.to_csv(final_fp, index=False)
 
-    # Import PRS weights file
-    ## Ensure the required columns are present
-    required_columns = ["variant_id", "weight", "contig", "position", "effect_allele", "noneffect_allele"]
-    missing_columns = [col for col in required_columns if col not in prs_df.columns]
-    if missing_columns:
-        raise ValueError(f"The PRS table is missing required columns: {', '.join(missing_columns)}")
-    
-    ## Include only required columns and any additional columns present in the PRS table
-    optional_columns = [col for col in prs_df.columns if col not in required_columns]
-    column_types = {col: "str" for col in required_columns}
-    column_types.update({"weight": "float64", "position": "int32"})
-    column_types.update({col: "str" for col in optional_columns})
-    
-    ## Re-import the PRS table with the determined column types
-    print("Re-importing PRS table...")
-    prs_table = hl.import_table(PGS_path, types=column_types, delimiter=',')
-    prs_table = prs_table.annotate(locus=hl.locus(prs_table.contig, prs_table.position))
-    prs_table = prs_table.key_by('locus')
-    print("PRS table re-imported successfully.")
-    
-    # Annotate the MatrixTable with the PRS information
-    print("Annotating the MatrixTable with PRS information...")
-    mt_prs = vds_prs.variant_data.annotate_rows(prs_info=prs_table[vds_prs.variant_data.locus])
-    mt_prs = mt_prs.unfilter_entries() 
-        
-    # Calculate effect allele count and multiply by variant weight in a single step
-    print("Calculating effect allele count...")
-    effect_allele_count_expr = calculate_effect_allele_count_na_hom_ref(mt_prs)
-    mt_prs = mt_prs.annotate_entries(
-        effect_allele_count=effect_allele_count_expr,
-        weighted_count=effect_allele_count_expr * mt_prs.prs_info['weight'])
-    
-    # Sum the weighted counts per sample and count the number of variants with weights per sample
-    print("Summing weighted counts per sample...")
-    mt_prs = mt_prs.annotate_cols(
-        sum_weights=hl.agg.sum(mt_prs.weighted_count),
-        N_variants=hl.agg.count_where(hl.is_defined(mt_prs.weighted_count)))
-    
-    # Write the PRS scores to a Hail Table
-    print(f"Writing the PRS scores to a Hail Table at: {hail_fp}")
-    mt_prs.key_cols_by().cols().write(hail_fp, overwrite=True)
-    
-    # Export the Hail Table to a CSV file
-    print(f"Exporting PRS scores...")
-    saved_mt = hl.read_table(hail_fp)
-    saved_mt.export(gc_csv_fp, header=True, delimiter=',')
-    print(f"PRS scores saved as: {gc_csv_fp}")
-    
-    # Optional: Extract and save found variants
-    if save_found_variants:
-        print("Extracting and saving found variants...")
-        found_variants_table = mt_prs.filter_rows(hl.is_defined(mt_prs.prs_info)).rows()
-        found_prs_info_df = found_variants_table.select(found_variants_table.prs_info).to_pandas()
-        
-        # Get the number of found variants
-        number_of_found_variants = found_prs_info_df.shape[0]
-        print(f"Number of found variants: {number_of_found_variants}")
-        
-        if bucket:
-            with gcsfs.GCSFileSystem().open(gc_found_csv_fp, 'w') as gcs_file:
-                found_prs_info_df.to_csv(gcs_file, header=True, index=False, sep=',')
-        else:
-            found_prs_info_df.to_csv(gc_found_csv_fp, header=True, index=False, sep=',')
-        print(f"Found variants saved as: {gc_found_csv_fp}")
+        print(f"\n🎉 Final merged PRS scores → {final_fp}")
+        if failed:
+            print(f"⚠️ Warning: These chunks failed: {failed}")
+        return final
 
-    return
+    print("💥 No scores produced (all chunks failed).")
+    return None

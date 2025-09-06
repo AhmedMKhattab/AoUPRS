@@ -11,7 +11,7 @@ from .utils import calculate_effect_allele_count_na_hom_ref
 
 
 # ---------------------------------------------------------------
-# Timer helper with icons
+# Timer helper
 # ---------------------------------------------------------------
 class StepTimer:
     def __init__(self, step_name, icon="⏩"):
@@ -29,12 +29,40 @@ class StepTimer:
 
 
 # ---------------------------------------------------------------
-# Core single-run function (your original steps)
+# Core single-run function
 # ---------------------------------------------------------------
 def _calculate_prs_single(vds, prs_df, prs_identifier, pgs_weight_path, output_path,
                           bucket=None, save_found_variants=False):
     """
-    Run PRS calculation exactly as the old function (single set of variants).
+    Run a single PRS calculation (no chunking).
+
+    Parameters
+    ----------
+    vds : hail.vds.VariantDataset
+        The Hail VariantDataset object to calculate PRS on.
+    prs_df : pandas.DataFrame
+        DataFrame containing the PRS weights and variant info. 
+        Must include columns: 'variant_id', 'weight', 'contig', 'position', 
+        'effect_allele', 'noneffect_allele'.
+    prs_identifier : str
+        Unique name/ID for this PRS run (used in output file naming).
+    pgs_weight_path : str
+        Path to the PRS weights file (CSV).
+    output_path : str
+        Local or bucket directory where results will be stored.
+    bucket : str, optional
+        Cloud bucket name (e.g. "gs://..."). If None, outputs are written locally.
+    save_found_variants : bool, default=False
+        If True, also save a CSV listing variants from the weight file that 
+        were found in the dataset.
+
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame with per-sample PRS results:
+        - sample_id
+        - sum_weights (total PRS)
+        - N_variants (number of variants used)
     """
 
     fs = gcsfs.GCSFileSystem()
@@ -128,14 +156,50 @@ def _calculate_prs_single(vds, prs_df, prs_identifier, pgs_weight_path, output_p
 
 
 # ---------------------------------------------------------------
-# Public wrapper with chunking
+# Wrapper with chunking
 # ---------------------------------------------------------------
 def calculate_prs_vds(vds, prs_identifier, pgs_weight_path, output_path,
                       bucket=None, save_found_variants=False,
                       chunk_size=None, max_workers=1, max_retries=2):
     """
-    Calculate PRS from a VDS.
-    Uses the original single-run pipeline, with optional chunking of variants.
+    Calculate PRS from a VDS, with optional chunking and resume support.
+
+    Parameters
+    ----------
+    vds : hail.vds.VariantDataset
+        The Hail VariantDataset object to calculate PRS on.
+    prs_identifier : str
+        Unique name/ID for this PRS run (used in output file naming).
+    pgs_weight_path : str
+        Path to the PRS weights file (CSV).
+    output_path : str
+        Local or bucket directory where results will be stored.
+    bucket : str, optional
+        Cloud bucket name (e.g. "gs://..."). If None, outputs are written locally.
+    save_found_variants : bool, default=False
+        If True, save per-chunk CSVs with found variants and merge them.
+    chunk_size : int, optional
+        Number of variants per chunk. If None, run all variants in one job.
+        Useful to avoid memory/timeouts with large scores.
+    max_workers : int, default=1
+        Number of parallel workers for chunked execution.
+    max_retries : int, default=2
+        How many times to retry a failed chunk before giving up.
+
+    Returns
+    -------
+    pandas.DataFrame or None
+        Merged PRS scores for all samples if successful.
+        Returns None if all chunks fail.
+
+    Notes
+    -----
+    - Resume logic:
+        * If scores CSV already exists for a chunk, it is skipped.
+        * If scores exist but found variants are missing, the chunk is recomputed.
+        * If neither exists, the chunk is fully recomputed.
+    - A final merged CSV is produced for both scores and found variants (if requested).
+    
     """
 
     print("")
@@ -181,21 +245,49 @@ def calculate_prs_vds(vds, prs_identifier, pgs_weight_path, output_path,
     all_scores, failed = [], []
 
     def run_with_retry(cid):
-        sub_df = prs_df.loc[prs_df["chunk_id"] == cid].copy()  # ✅ no warning
+        sub_df = prs_df.loc[prs_df["chunk_id"] == cid].copy()
 
-        # chunk output file
-        chunk_fp = f"{output_path}/score/{prs_identifier}_chunk{cid}_scores.csv"
+        # expected outputs
+        score_fp = f"{output_path}/score/{prs_identifier}_chunk{cid}_scores.csv"
+        found_fp = f"{output_path}/score/{prs_identifier}_chunk{cid}_found_in_aou.csv"
+        hail_fp  = f"{output_path}/hail/{prs_identifier}_chunk{cid}"
+
         if bucket:
-            chunk_exists = fs.exists(f"{bucket}/{chunk_fp}")
+            score_exists = fs.exists(f"{bucket}/{score_fp}")
+            found_exists = fs.exists(f"{bucket}/{found_fp}") if save_found_variants else True
         else:
-            chunk_exists = os.path.exists(chunk_fp)
+            score_exists = os.path.exists(score_fp)
+            found_exists = os.path.exists(found_fp) if save_found_variants else True
 
-        # if already exists, reload
-        if chunk_exists:
-            print(f"⏭️ [chunk {cid}] Skipping (already exists).")
-            return pd.read_csv(f"{bucket}/{chunk_fp}" if bucket else chunk_fp)
+        # Case 1: both exist → skip
+        if score_exists and found_exists:
+            print(f"⏭️ [chunk {cid}] Skipping (already complete).")
+            return pd.read_csv(f"{bucket}/{score_fp}" if bucket else score_fp)
 
+        # Case 2: scores exist but found variants missing
+        if score_exists and save_found_variants and not found_exists:
+            print(f"🧩 [chunk {cid}] Scores exist but no found variants. Recomputing chunk to regenerate them...")
+            # force full recompute so prs_info rows are available
+            return _calculate_prs_single(
+                vds, sub_df, f"{prs_identifier}_chunk{cid}",
+                pgs_weight_path, output_path,
+                bucket, save_found_variants
+            )
+
+        # Case 3: neither exists → run full
         for attempt in range(1, max_retries + 1):
+            # Clean up stale hail dir if present but scores missing
+            if bucket:
+                hail_path = f"{bucket}/{hail_fp}"
+                if fs.exists(hail_path):
+                    print(f"🧹 [chunk {cid}] Removing stale Hail table before rerun")
+                    fs.rm(hail_path, recursive=True)
+            else:
+                if os.path.exists(hail_fp):
+                    print(f"🧹 [chunk {cid}] Removing stale Hail table before rerun")
+                    import shutil
+                    shutil.rmtree(hail_fp)
+
             with StepTimer(f"Chunk {cid} attempt {attempt}", "⏱️"):
                 try:
                     return _calculate_prs_single(
@@ -210,16 +302,17 @@ def calculate_prs_vds(vds, prs_identifier, pgs_weight_path, output_path,
                         failed.append(cid)
                         return None
 
-    with StepTimer("Total PRS run", "⏳"):  # ✅ grand total
-        with ThreadPoolExecutor(max_workers=max_workers) as ex:
-            futures = {ex.submit(run_with_retry, cid): cid for cid in chunk_ids}
-            for fut in as_completed(futures):
-                result = fut.result()
-                if result is not None:
-                    all_scores.append(result)
+    # Run chunks in parallel
+    with ThreadPoolExecutor(max_workers=max_workers) as ex:
+        futures = {ex.submit(run_with_retry, cid): cid for cid in chunk_ids}
+        for fut in as_completed(futures):
+            result = fut.result()
+            if result is not None:
+                all_scores.append(result)
 
     # Merge results
     if all_scores:
+        # --- merge scores ---
         final = pd.concat(all_scores)
         final = final.groupby("s").agg({
             "sum_weights": "sum",
@@ -234,6 +327,31 @@ def calculate_prs_vds(vds, prs_identifier, pgs_weight_path, output_path,
             final.to_csv(final_fp, index=False)
 
         print(f"\n🎉 Final merged PRS scores → {final_fp}")
+
+        # --- merge found variants if requested ---
+        if save_found_variants:
+            found_dfs = []
+            for cid in chunk_ids:
+                found_fp = f"{output_path}/score/{prs_identifier}_chunk{cid}_found_in_aou.csv"
+                if bucket:
+                    if fs.exists(f"{bucket}/{found_fp}"):
+                        with fs.open(f"{bucket}/{found_fp}", "rb") as f:
+                            found_dfs.append(pd.read_csv(f))
+                else:
+                    if os.path.exists(found_fp):
+                        found_dfs.append(pd.read_csv(found_fp))
+
+            if found_dfs:
+                merged_found = pd.concat(found_dfs, ignore_index=True)
+                merged_found_fp = f"{output_path}/score/{prs_identifier}_final_found_in_aou.csv"
+                if bucket:
+                    with fs.open(f"{bucket}/{merged_found_fp}", "w") as f:
+                        merged_found.to_csv(f, index=False)
+                else:
+                    merged_found.to_csv(merged_found_fp, index=False)
+
+                print(f"🔎 Final merged found variants → {merged_found_fp}")
+
         if failed:
             print(f"⚠️ Warning: These chunks failed: {failed}")
         return final

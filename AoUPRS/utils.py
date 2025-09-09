@@ -73,42 +73,33 @@ def calculate_effect_allele_count_na_hom_ref(vds):
 
         Khattab et al., “AoUPRS: A Cost-Effective and Versatile PRS Calculator for the All of Us Program”,
         BMC Genomics 2025. https://link.springer.com/article/10.1186/s12864-025-11693-9
-
-    Parameters
-    ----------
-    vds : hail.vds.VariantDataset
-        A Hail VariantDataset containing PRS metadata in `vds.prs_info` and either `GT` (v7) or `LGT + LA` (v8).
-
-    Returns
-    -------
-    hail.expr.Int32Expression
-        An integer Hail expression representing the effect allele dosage (0–2) for each sample.
     """
-    # Retrieve the effect and non-effect alleles from PRS weights
     effect_allele = vds.prs_info['effect_allele']
     non_effect_allele = vds.prs_info['noneffect_allele']
 
-    # Reference allele is always the first allele in the global allele list
-    ref_allele = vds.alleles[0]
-    alt_alleles_set = hl.set(vds.alleles[1:])
+    # Always row-scoped (safe for v7 and v8)
+    ref_allele = vds.row.alleles[0]
+    alt_alleles_set = hl.set(vds.row.alleles[1:])
 
     # Boolean flags to identify where the effect allele lies
     is_effect_allele_ref = ref_allele == effect_allele
     is_effect_allele_alt = alt_alleles_set.contains(effect_allele)
 
-    if 'GT' in vds.entry:
-        # VDS v7 — use GT (global genotypes) directly
-        gt_alleles = hl.or_else(vds.GT, hl.null(hl.tcall))
-        alleles = hl.or_missing(
-            hl.is_defined(gt_alleles),
-            gt_alleles.alleles().map(lambda i: vds.alleles[i])  # map index → actual allele
+    if "GT" in vds.entry:  # v7 — dense GT genotypes
+        return (
+            hl.case()
+              .when(hl.is_missing(vds.GT) & is_effect_allele_ref, 2)
+              .when(hl.is_missing(vds.GT) & is_effect_allele_alt, 0)
+              .when(vds.GT.is_hom_ref() & is_effect_allele_ref, 2)
+              .when(vds.GT.is_hom_var() & is_effect_allele_alt, 2)
+              .when(vds.GT.is_het() & (is_effect_allele_ref | is_effect_allele_alt), 1)
+              .default(0)
         )
-    else:
-        # VDS v8 — use LGT + LA to reconstruct genotypes from local alleles
+        
+    else:  # v8 — reconstruct GT from LGT + LA
         lgt = vds.entry.LGT
         la = hl.or_else(vds.entry.LA, hl.empty_array(hl.tint32))
 
-        # Manually map local genotype indices → global alleles via LA → vds.alleles
         alleles = hl.or_missing(
             hl.is_defined(lgt) & hl.is_defined(la),
             hl.array([
@@ -117,19 +108,15 @@ def calculate_effect_allele_count_na_hom_ref(vds):
             ])
         )
 
-    # Handle cases where genotype is missing:
-    # If missing and effect allele is reference → assume 2 copies
-    # If missing and effect allele is alternate → assume 0 copies
-    missing_expr = hl.case() \
-        .when(hl.is_missing(alleles) & is_effect_allele_ref, 2) \
-        .when(hl.is_missing(alleles) & is_effect_allele_alt, 0)
+        missing_expr = hl.case() \
+            .when(hl.is_missing(alleles) & is_effect_allele_ref, 2) \
+            .when(hl.is_missing(alleles) & is_effect_allele_alt, 0)
 
-    # Final effect allele dosage: count how many genotype alleles match the effect allele
-    effect_allele_count = hl.len(
-        hl.or_else(alleles, hl.empty_array(hl.tstr)).filter(lambda a: a == effect_allele)
-    )
+        effect_allele_count = hl.len(
+            hl.or_else(alleles, hl.empty_array(hl.tstr)).filter(lambda a: a == effect_allele)
+        )
 
-    return missing_expr.default(effect_allele_count)
+        return missing_expr.default(effect_allele_count)
     
     
 # Add more utility functions as needed

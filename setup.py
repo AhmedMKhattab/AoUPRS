@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name='AoUPRS',
-    version='0.2.5',
+    version='0.2.6',
     description='AoUPRS is a Python module for calculating Polygenic Risk Scores (PRS) specific to the All of Us study',
     long_description=long_description,
     long_description_content_type='text/markdown',  # ← important

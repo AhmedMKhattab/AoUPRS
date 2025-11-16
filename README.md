@@ -14,7 +14,7 @@ AoUPRS provides two approaches:
 - **MatrixTable (MT)** – dense representation  
 - **Variant Dataset (VDS)** – sparse representation (recommended for v8)  
 
-📄 [Publication in BMC Genomics (2025)](https://bmcgenomics.biomedcentral.com/articles/10.1186/s12864-025-11693-9)
+📄 [Publication in BMC Genomics (2025)](https://link.springer.com/article/10.1186/s12864-025-11693-9)
 
 
 
